@@ -1,25 +1,22 @@
 package com.dodola.animview;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.LightingColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
+import android.view.animation.AnticipateInterpolator;
+import android.view.animation.BounceInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.view.animation.Transformation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 
 /**
  * Created by dodola on 15/7/27.
@@ -29,8 +26,8 @@ public class MetaballView extends View {
     private Paint paint = new Paint();
     private float handle_len_rate = 2f;
     private float radius = 30;
-    private final int ITEM_COUNT = 6;
-    private final int ITEM_DIVIDER = 60;
+    private final int ITEM_COUNT = 6;//点的数量
+    private final int ITEM_DIVIDER = 60;//两点间的距离
     private final float SCALE_RATE = 0.3f;
     private float maxLength;
     private ArrayList<Circle> circlePaths = new ArrayList<>();
@@ -55,7 +52,7 @@ public class MetaballView extends View {
     }
 
     private class Circle {
-        float[] center;
+        float[] center;//中心点位置 x y
         float radius;
     }
 
@@ -64,6 +61,9 @@ public class MetaballView extends View {
         invalidate();
     }
 
+    /**
+     * 初始化画笔、初始化球
+     */
     private void init() {
         paint.setColor(0xff4db9ff);
         paint.setStyle(Paint.Style.FILL);
@@ -71,7 +71,7 @@ public class MetaballView extends View {
         Circle circlePath = new Circle();
         circlePath.center = new float[]{(radius + ITEM_DIVIDER), radius * (1f + SCALE_RATE)};
         circlePath.radius = radius / 4 * 3;
-        circlePaths.add(circlePath);
+        circlePaths.add(circlePath);//添加第一个球
 
         for (int i = 1; i < ITEM_COUNT; i++) {
             circlePath = new Circle();
@@ -79,7 +79,10 @@ public class MetaballView extends View {
             circlePath.radius = radius;
             circlePaths.add(circlePath);
         }
-        maxLength = (radius * 2 + ITEM_DIVIDER) * ITEM_COUNT;
+        maxLength = (radius * 2 + ITEM_DIVIDER) * ITEM_COUNT;//最大宽度
+        ball = new RectF();
+        ball1 = new RectF();
+        ball2 = new RectF();
     }
 
     private float[] getVector(float radians, float length) {
@@ -96,6 +99,7 @@ public class MetaballView extends View {
         protected void applyTransformation(float interpolatedTime, Transformation t) {
             super.applyTransformation(interpolatedTime, t);
             mInterpolatedTime = interpolatedTime;
+//            Log.e("interpolatedTime", interpolatedTime + "");
             invalidate();
         }
     }
@@ -103,22 +107,22 @@ public class MetaballView extends View {
     /**
      * @param canvas          画布
      * @param j
-     * @param i
+     * @param i 0
      * @param v               控制两个圆连接时候长度，间接控制连接线的粗细，该值为1的时候连接线为直线
-     * @param handle_len_rate
-     * @param maxDistance
+     * @param handle_len_rate 2f
+     * @param maxDistance TODO ??
      */
+    RectF ball1, ball2;
+
     private void metaball(Canvas canvas, int j, int i, float v, float handle_len_rate, float maxDistance) {
         final Circle circle1 = circlePaths.get(i);
         final Circle circle2 = circlePaths.get(j);
 
-        RectF ball1 = new RectF();
         ball1.left = circle1.center[0] - circle1.radius;
         ball1.top = circle1.center[1] - circle1.radius;
         ball1.right = ball1.left + circle1.radius * 2;
         ball1.bottom = ball1.top + circle1.radius * 2;
 
-        RectF ball2 = new RectF();
         ball2.left = circle2.center[0] - circle2.radius;
         ball2.top = circle2.center[1] - circle2.radius;
         ball2.right = ball2.left + circle2.radius * 2;
@@ -142,18 +146,19 @@ public class MetaballView extends View {
 
         if (d > maxDistance) {
 //            canvas.drawCircle(ball1.centerX(), ball1.centerY(), circle1.radius, paint);
-            canvas.drawCircle(ball2.centerX(), ball2.centerY(), circle2.radius, paint);
+            canvas.drawCircle(ball2.centerX(), ball2.centerY(), circle2.radius, paint);//绘制大球
         } else {
             float scale2 = 1 + SCALE_RATE * (1 - d / maxDistance);
             float scale1 = 1 - SCALE_RATE * (1 - d / maxDistance);
             radius2 *= scale2;
 //            radius1 *= scale1;
 //            canvas.drawCircle(ball1.centerX(), ball1.centerY(), radius1, paint);
-            canvas.drawCircle(ball2.centerX(), ball2.centerY(), radius2, paint);
+            canvas.drawCircle(ball2.centerX(), ball2.centerY(), radius2, paint);//绘制更大球
 
         }
 
-//        Log.d("Metaball_radius", "radius1:" + radius1 + ",radius2:" + radius2);
+        //路径
+        Log.e("Metaball_radius", "radius1:" + radius1 + ",radius2:" + radius2);
         if (radius1 == 0 || radius2 == 0) {
             return;
         }
@@ -169,7 +174,7 @@ public class MetaballView extends View {
             u1 = 0;
             u2 = 0;
         }
-//        Log.d("Metaball", "center2:" + Arrays.toString(center2) + ",center1:" + Arrays.toString(center1));
+        Log.e("Metaball", "center2:" + Arrays.toString(center2) + ",center1:" + Arrays.toString(center1));
         float[] centermin = new float[]{center2[0] - center1[0], center2[1] - center1[1]};
 
         float angle1 = (float) Math.atan2(centermin[1], centermin[0]);
@@ -179,7 +184,7 @@ public class MetaballView extends View {
         float angle2a = (float) (angle1 + Math.PI - u2 - (Math.PI - u2 - angle2) * v);
         float angle2b = (float) (angle1 - Math.PI + u2 + (Math.PI - u2 - angle2) * v);
 
-//        Log.d("Metaball", "angle1:" + angle1 + ",angle2:" + angle2 + ",angle1a:" + angle1a + ",angle1b:" + angle1b + ",angle2a:" + angle2a + ",angle2b:" + angle2b);
+//        Log.e("Metaball", "angle1:" + angle1 + ",angle2:" + angle2 + ",angle1a:" + angle1a + ",angle1b:" + angle1b + ",angle2a:" + angle2a + ",angle2b:" + angle2b);
 
 
         float[] p1a1 = getVector(angle1a, radius1);
@@ -193,14 +198,14 @@ public class MetaballView extends View {
         float[] p2b = new float[]{p2b1[0] + center2[0], p2b1[1] + center2[1]};
 
 
-//        Log.d("Metaball", "p1a:" + Arrays.toString(p1a) + ",p1b:" + Arrays.toString(p1b) + ",p2a:" + Arrays.toString(p2a) + ",p2b:" + Arrays.toString(p2b));
+        Log.e("Metaball", "p1a:" + Arrays.toString(p1a) + ",p1b:" + Arrays.toString(p1b) + ",p2a:" + Arrays.toString(p2a) + ",p2b:" + Arrays.toString(p2b));
 
         float[] p1_p2 = new float[]{p1a[0] - p2a[0], p1a[1] - p2a[1]};
 
         float totalRadius = (radius1 + radius2);
         float d2 = Math.min(v * handle_len_rate, getLength(p1_p2) / totalRadius);
         d2 *= Math.min(1, d * 2 / (radius1 + radius2));
-//        Log.d("Metaball", "d2:" + d2);
+        Log.e("Metaball", "d2:" + d2);
         radius1 *= d2;
         radius2 *= d2;
 
@@ -208,7 +213,7 @@ public class MetaballView extends View {
         float[] sp2 = getVector(angle2a + pi2, radius2);
         float[] sp3 = getVector(angle2b - pi2, radius2);
         float[] sp4 = getVector(angle1b + pi2, radius1);
-//        Log.d("Metaball", "sp1:" + Arrays.toString(sp1) + ",sp2:" + Arrays.toString(sp2) + ",sp3:" + Arrays.toString(sp3) + ",sp4:" + Arrays.toString(sp4));
+        Log.e("Metaball", "sp1:" + Arrays.toString(sp1) + ",sp2:" + Arrays.toString(sp2) + ",sp3:" + Arrays.toString(sp3) + ",sp4:" + Arrays.toString(sp4));
 
 
         Path path1 = new Path();
@@ -252,28 +257,30 @@ public class MetaballView extends View {
 //
 //        return true;
 //    }
+    RectF ball;
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         circle = circlePaths.get(0);
         circle.center[0] = maxLength * mInterpolatedTime;
+        //绘制可动球
 
-        RectF ball1 = new RectF();
-        ball1.left = circle.center[0] - circle.radius;
-        ball1.top = circle.center[1] - circle.radius;
-        ball1.right = ball1.left + circle.radius * 2;
-        ball1.bottom = ball1.top + circle.radius * 2;
-        canvas.drawCircle(ball1.centerX(), ball1.centerY(), circle.radius, paint);
+        ball.left = circle.center[0] - circle.radius;
+        ball.top = circle.center[1] - circle.radius;
+        ball.right = ball.left + circle.radius * 2;
+        ball.bottom = ball.top + circle.radius * 2;
+        canvas.drawCircle(ball.centerX(), ball.centerY(), circle.radius, paint);
 
 
         for (int i = 1, l = circlePaths.size(); i < l; i++) {
-            metaball(canvas, i, 0, 0.6f, handle_len_rate, radius * 4f);
+            metaball(canvas, i, 0, 0.6f/*贝塞尔曲线控制点长度比率*/, handle_len_rate, radius * 4.5f);
         }
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        //TODO 取消之后无法控制位置
         setMeasuredDimension(resolveSizeAndState((int) (ITEM_COUNT * (radius * 2 + ITEM_DIVIDER)), widthMeasureSpec, 0),
                 resolveSizeAndState((int) (2 * radius * 1.4f), heightMeasureSpec, 0));
     }
